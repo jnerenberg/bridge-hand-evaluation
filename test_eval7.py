@@ -15,6 +15,71 @@ class TestDecisionLeaf(unittest.TestCase):
         leaf = DecisionLeaf(2)
         self.assertEqual(leaf.predict(None), 2)
 
+class TestDecisionBranch(unittest.TestCase):
+
+    def setUp(self):
+        self.leaf1 = DecisionLeaf(1)
+        self.leaf2 = DecisionLeaf(2)
+        self.branch = DecisionBranch('attr', {'A': self.leaf1, 'B': self.leaf2}, 0)
+
+    def test_predict_existing_branch(self):
+        self.assertEqual(self.branch.predict(pd.Series({'attr': 'A'})), 1)
+        self.assertEqual(self.branch.predict(pd.Series({'attr': 'B'})), 2)
+
+    def test_predict_default_branch(self):
+        self.assertEqual(self.branch.predict(pd.Series({'attr': 'C'})), 0)
+
+class TestFunctions(unittest.TestCase):
+
+    def setUp(self):
+        self.data = pd.DataFrame({
+            'attr1': ['A', 'A', 'B', 'B'],
+            'attr2': ['X', 'Y', 'X', 'Y'],
+            'avgTricks': [1, 2, 3, 4]
+        })
+        self.X = self.data[['attr1', 'attr2']]
+        self.y = self.data['avgTricks']
+
+    def test_mtry(self):
+        attrs = ['attr1', 'attr2']
+        selected_attrs = mtry(attrs)
+        self.assertTrue(len(selected_attrs) <= len(attrs))
+
+    def test_information_gain(self):
+        gain = information_gain(self.X, self.y, 'attr1')
+        self.assertGreaterEqual(gain, 0)
+
+    def test_bootStrap(self):
+        x_boot, y_boot, x_oob, y_oob, boot_indices, oob_indices = bootStrap(self.y, self.X, random_state=42)
+        self.assertEqual(len(x_boot), len(self.X))
+        self.assertEqual(len(y_boot), len(self.y))
+        self.assertGreater(len(x_oob), 0)
+        self.assertGreater(len(y_oob), 0)
+
+    def test_learn_decision_tree(self):
+        attrs = list(self.X.columns)
+        tree = learn_decision_tree(self.X, self.y, attrs, self.y)
+        self.assertIsInstance(tree, DecisionBranch)
+
+    def test_fit(self):
+        attrs = list(self.X.columns)
+        tree = fit(self.X, self.y, attrs)
+        self.assertIsInstance(tree, DecisionBranch)
+
+    def test_predict(self):
+        attrs = list(self.X.columns)
+        tree = fit(self.X, self.y, attrs)
+        predictions = predict(tree, self.X)
+        self.assertEqual(len(predictions), len(self.y))
+
+    def test_compute_metrics(self):
+        metrics = compute_metrics(self.y, self.y)
+        self.assertEqual(metrics['mean_difference'], 0)
+
+    def test_compute_acc(self):
+        acc = compute_acc(self.y, self.y)
+        self.assertEqual(acc['mean_difference'], 0)
+
 if __name__ == '__main__':
     unittest.main()
 
