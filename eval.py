@@ -93,8 +93,8 @@ def predict(tree: DecisionNode, X: pd.DataFrame):
     return X.apply(lambda x: tree.predict(x), axis=1)
 
 def compute_metrics(y_true, y_pred):
-    accuracy = (y_true == y_pred).mean()
-    return {"accuracy": accuracy}
+    mean_difference = (y_true - y_pred).mean()
+    return {"mean_difference": mean_difference}
 
 # Load the data
 data = pd.read_csv('BridgeDataTrump.csv')
