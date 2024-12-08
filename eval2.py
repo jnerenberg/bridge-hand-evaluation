@@ -31,16 +31,12 @@ class DecisionBranch:
         else:
             return self.default_label
 
-
 def mtry(attrs: Sequence[str]) -> Sequence[str]:
-    """Return number of attributes to consider for each split"""
-    num_vars = len(attrs)
-    num_to_select = math.floor(16)
-    return random.sample(attrs, num_to_select)
+    return attrs
 
 def information_gain(X: pd.DataFrame, y: pd.Series, attr: str) -> float:
     total_mean = y.mean()
-    unique_values = X[attr].nunique()
+    unique_values = X[attr].unique()
     subsets = []
 
     for value in unique_values:
@@ -80,7 +76,7 @@ def learn_decision_tree(
     if len(attrs) == 0 or X.empty:
         return DecisionLeaf(round(y_parent.mean()))
     
-    best_attr = max(attrs, key=lambda attr: information_gain(X, y, attrs))
+    best_attr = max(attrs, key=lambda attr: information_gain(X, y, attr))
     attrs = [attr for attr in attrs if attr != best_attr]
     
     branches = {}
@@ -136,7 +132,7 @@ for i in range(10):
 # Predict the target variable on the test set using majority voting
 y_preds = pd.DataFrame()
 for i in range(len(trees)):
-    y_preds[i] = oob_x[i].apply(lambda row: predict(trees[i], row), axis=1)
+    y_preds[i] = predict(trees[i], oob_x[i])
 
 # Majority voting
 final_predictions = y_preds.mode(axis=1)[0]
