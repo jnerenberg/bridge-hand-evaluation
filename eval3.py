@@ -118,7 +118,7 @@ oob_y = []
 oob_masks = []
 unused_attrs = []
 trees = []
-for i in range(10): 
+for i in range(20): 
     boot_data = bootStrap(y, X, random_state=i)
     attrs = mtry(list(X.columns))
 
@@ -154,14 +154,14 @@ importance_scores = {}
 for feature in features:
     y_without_preds = pd.DataFrame(index=X.index)
     for i in range(len(trees)):
-        if feature not in unused_attrs[i]:  # Corrected condition
+        if feature in unused_attrs[i]:  # Corrected condition
             y_without_preds[i] = pd.Series(predict(trees[i], oob_x[i]), index=oob_x[i].index)
     
     if not y_without_preds.empty:
         # Majority voting for predictions without the feature
         importance_predictions = y_without_preds.mode(axis=1)[0]
         # Calculate the accuracy without the feature
-        importance_metrics = compute_acc(y, importance_predictions)
+        importance_metrics = compute_metrics(final_predictions, importance_predictions)
         importance_scores[feature] = importance_metrics["mean_difference"]
     else:
         importance_scores[feature] = float('inf')  # Assign a high importance score if no predictions are available
