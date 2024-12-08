@@ -55,6 +55,7 @@ class TestFunctions(unittest.TestCase):
         self.assertEqual(len(y_boot), len(self.y))
         self.assertGreater(len(x_oob), 0)
         self.assertGreater(len(y_oob), 0)
+        self.assertGreater(len(oob_indices), 0)
 
     def test_learn_decision_tree(self):
         attrs = list(self.X.columns)
