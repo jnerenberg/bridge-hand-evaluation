@@ -31,16 +31,12 @@ class DecisionBranch:
         else:
             return self.default_label
 
-
 def mtry(attrs: Sequence[str]) -> Sequence[str]:
-    """Return number of attributes to consider for each split"""
-    num_vars = len(attrs)
-    num_to_select = math.floor(16)
-    return random.sample(attrs, num_to_select)
+    return attrs
 
 def information_gain(X: pd.DataFrame, y: pd.Series, attr: str) -> float:
     total_mean = y.mean()
-    unique_values = X[attr].nunique()
+    unique_values = X[attr].unique()
     subsets = []
 
     for value in unique_values:
@@ -80,7 +76,7 @@ def learn_decision_tree(
     if len(attrs) == 0 or X.empty:
         return DecisionLeaf(round(y_parent.mean()))
     
-    best_attr = max(attrs, key=lambda attr: information_gain(X, y, attrs))
+    best_attr = max(attrs, key=lambda attr: information_gain(X, y, attr))
     attrs = [attr for attr in attrs if attr != best_attr]
     
     branches = {}
@@ -137,7 +133,6 @@ for i in range(10):
     oob_x.append(boot_data[2])
     oob_y.append(boot_data[3])
     oob_masks.append(boot_data[4])
-    unused_attrs.append(all_attrs - used_attrs)
 
 # Align the OOB datasets using the indices
 aligned_oob_preds = pd.DataFrame(index=X.index)
@@ -159,22 +154,21 @@ importance_scores = {}
 for feature in features:
     y_without_preds = pd.DataFrame(index=X.index)
     for i in range(len(trees)):
-        if feature in unused_attrs[i]:
+        if feature not in unused_attrs[i]:  # Corrected condition
             y_without_preds[i] = pd.Series(predict(trees[i], oob_x[i]), index=oob_x[i].index)
     
-    # Majority voting for predictions without the feature
-    importance_predictions = y_without_preds.mode(axis=1)[0]
-    
-    # Compute metrics for the predictions without the feature
-    importance_metrics = compute_metrics(final_predictions, importance_predictions)
-    
-    # Calculate importance score (e.g., difference in mean difference)
-    importance_score = metrics['mean_difference'] - importance_metrics['mean_difference']
-    importance_scores[feature] = importance_score
+    if not y_without_preds.empty:
+        # Majority voting for predictions without the feature
+        importance_predictions = y_without_preds.mode(axis=1)[0]
+        # Calculate the accuracy without the feature
+        importance_metrics = compute_acc(y, importance_predictions)
+        importance_scores[feature] = importance_metrics["mean_difference"]
+    else:
+        importance_scores[feature] = float('inf')  # Assign a high importance score if no predictions are available
 
-# Print importance scores
+# Print feature importance scores
 for feature, score in importance_scores.items():
-    print(f"Importance of {feature}: {score * 3.333}")
+    print(f"Feature: {feature}, Importance Score: {score}")
 
 # Save the model to a file
 joblib.dump(trees, 'forest_model.pkl')
