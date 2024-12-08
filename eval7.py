@@ -111,7 +111,7 @@ def compute_acc(y_true, y_pred):
 data = pd.read_csv('BridgeDataTrump.csv')
 
 # Define the target variable and features
-target = 'avgTricks'
+target = 'diff_tricks_contract'
 features = data.columns.drop(target)
 
 # Split the data into y and x
