@@ -161,8 +161,9 @@ dataSet <- dataSet |>
 
 library(stringr)
 
-unprotected_hands <- function(hand) {
+unprotected_hands <- function(hand, hcp) {
   result <- ""
+  if(hcp >=12)
   for (suit in hand) {
     result <- paste0(result, unprotected_honors(suit))
   }
@@ -203,13 +204,14 @@ unprotected_honors <- function(suit) {
 
 
 #unprotected honors added to the set
-dataSet <- dataSet |>
-  rowwise() |>
+dataSet <- dataSet %>%
+  rowwise() %>%
   mutate(
-    N_unprot = unprotected_hands(c(NS, NH, ND, NC)),
-    E_unprot = unprotected_hands(c(ES, EH, ED, EC)),
-    S_unprot = unprotected_hands(c(SS, SH, SD, SC)),
-    W_unprot = unprotected_hands(c(WS, WH, WD, WC))) |>
+    N_unprot = unprotected_hands(c(NS, NH, ND, NC), N_HCP),
+    E_unprot = unprotected_hands(c(ES, EH, ED, EC), E_HCP),
+    S_unprot = unprotected_hands(c(SS, SH, SD, SC), S_HCP),
+    W_unprot = unprotected_hands(c(WS, WH, WD, WC), W_HCP)
+  ) %>%
   ungroup()
 
 #positioning (if the person that goes after you has more than ten points)
@@ -248,10 +250,13 @@ dataSet <- dataSet |>
 
 ratio_aces <- function(hand, hcp) {
   if(hcp ==0) {
-    return(1)
+    return(0)
   }
+  else if(hcp >= 12) {
   numAces <- str_count(hand, "A")
   return(numAces * 4/hcp)
+  }
+  return(0)
 }
 
 #adding to the dataSet ace ratio
@@ -322,7 +327,7 @@ finalSet <- rbind(EW_dec_set, NS_dec_set)
 finalSet <- finalSet |>
   select(-c(SS,SH,SD,SC,NS,NH,ND,NC,ES,EH,ED,EC,WS,WH,WD,WC,
             tourndetailaa, Round, BrdNr, BrdCd, Phase, numCon,
-            Dlr, Vuln, ClosedContract, diff_tricks_contract,
+            Dlr, Vuln, ClosedContract,
             S_Dist, N_Dist, E_Dist, W_Dist))
 
 #discretizing TotalPoints (HCP + Dist points)
@@ -347,6 +352,20 @@ finalSet <- finalSet |>
     . <= .75 ~ 0,
     TRUE ~ 1)))
 
+finalSet <- finalSet |>
+  mutate(across(ends_with("Len_Trump"), ~ case_when(
+    . <=2 ~0,
+    . <=3 ~1,
+    . <=4 ~2,
+    . <=5 ~3,
+    . <=13 ~4)))
+
+finalSet <- finalSet |>
+  mutate(across(ends_with("unprot"), ~ case_when(
+    . == "" ~ FALSE,
+    TRUE ~ TRUE
+  )))
+
 #Separate into NT and Trump contract data Sets 
 
 NT_data <- finalSet %>%
@@ -359,8 +378,8 @@ Trump_data <- finalSet %>%
   select(-c(N_HCP, W_HCP, S_HCP, E_HCP)) 
 
 # Save the dataset as an Excel file
-write_csv(NT_data, "BridgeDataTrump.csv")
-write_csv(Trump_data, "BridgeDataNoTrump.csv")
+write_csv(Trump_data, "BridgeDataTrump.csv")
+write_csv(NT_data, "BridgeDataNoTrump.csv")
 
 
 
